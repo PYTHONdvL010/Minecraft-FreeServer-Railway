@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>پنل سرور ماینکرافت</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1c1f22;--p:#262a2e;--b:#3a4047;--t:#e9e6df;--m:#98a0a6;--a:#3fb8af;--g:#6aa84f;--r:#c0504d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t);font:400 15px/1.7 Vazirmatn,Tahoma,sans-serif}
+button,input,select{font:inherit;color:var(--t);background:#16191b;border:2px solid var(--b);border-radius:2px;padding:6px 10px}
+button{cursor:pointer;background:var(--p)}button:hover{border-color:var(--a)}
+button.pri{background:var(--a);color:#0c1b1a;border-color:var(--a);font-weight:600}
+button.bad{border-color:var(--r);color:#f0b3b1}
+:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 20px;background:var(--p);border-bottom:2px solid var(--b)}
+h1{font-size:20px;font-weight:800;margin:0;margin-inline-end:auto}
+#st{padding:2px 12px;border:2px solid var(--b);color:var(--m)}#st.on{border-color:var(--g);color:var(--g)}#st.w{border-color:#d9a441;color:#d9a441}
+#addr{color:var(--m);direction:ltr;unicode-bidi:plaintext}
+nav{display:flex;gap:4px;padding:10px 20px 0;overflow-x:auto;border-bottom:2px solid var(--b)}
+nav button{border-bottom:0;border-radius:2px 2px 0 0;white-space:nowrap}nav button.on{background:var(--a);color:#0c1b1a;border-color:var(--a);font-weight:600}
+main{max-width:900px;margin:0 auto;padding:20px}
+section{display:none}section.on{display:block}
+#log{height:55vh;overflow:auto;margin:0 0 10px;padding:12px;background:#0f1112;border:2px solid var(--b);font:12.5px/1.5 ui-monospace,Consolas,monospace;direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-all}
+.row{display:flex;gap:8px}.row input{flex:1;direction:ltr}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-bottom:16px}
+label{display:flex;flex-direction:column;gap:4px;color:var(--m);font-size:13px}label input,label select{color:var(--t);font-size:15px}
+label.ck{flex-direction:row;align-items:center;gap:8px;color:var(--t)}label.ck input{width:18px;height:18px}
+.hint{color:var(--m);font-size:13px;margin:6px 0 14px}
+ul{list-style:none;margin:12px 0;padding:0}li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;border:2px solid var(--b);border-top-width:0}li:first-child{border-top-width:2px}
+li span{direction:ltr;word-break:break-all}
+#ic{width:64px;height:64px;image-rendering:pixelated;border:2px solid var(--b);background:#0f1112}
+.ico{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+#L{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:5}#L[hidden]{display:none}
+#L div{display:flex;flex-direction:column;gap:10px;width:min(320px,90vw)}
+#T{position:fixed;bottom:16px;inset-inline-start:16px;background:var(--p);border:2px solid var(--a);padding:8px 14px;display:none;max-width:80vw}
+</style>
+</head>
+<body>
+<div id="L" hidden><div><h1>ورود به پنل</h1><input id="pw" type="password" placeholder="رمز عبور" style="direction:ltr"><button class="pri" onclick="login()">ورود</button></div></div>
+<header>
+  <h1>پنل سرور ماینکرافت</h1>
+  <span id="addr"></span><span id="st">خاموش</span>
+  <button class="pri" onclick="act('start')">روشن</button>
+  <button onclick="act('restart')">ری‌استارت</button>
+  <button class="bad" onclick="act('stop')">خاموش</button>
+</header>
+<nav id="tabs"></nav>
+<main>
+<section id="s0">
+  <pre id="log"></pre>
+  <div class="row"><input id="cmd" placeholder="دستور (مثلاً op Steve یا say hello)" onkeydown="if(event.key==='Enter')sendCmd()"><button onclick="sendCmd()">ارسال</button></div>
+</section>
+
+<section id="s1">
+  <div class="ico"><img id="ic" alt="" onerror="this.style.visibility='hidden'" onload="this.style.visibility='visible'"><div><label>آیکون سرور (هر عکسی؛ خودکار ۶۴×۶۴ می‌شود)<input type="file" accept="image/*" onchange="icon(this.files[0])"></label></div></div>
+  <div class="grid">
+    <label>اسم سرور (MOTD)<input data-p="motd"></label>
+    <label>نوع سرور<select data-c="type" id="type"></select></label>
+    <label>ورژن<select data-c="version" id="ver"></select></label>
+    <label>حداکثر بازیکن<input data-p="max-players" type="number" min="1"></label>
+    <label>گیم‌مود<select data-p="gamemode"><option value="survival">بقا</option><option value="creative">خلاقانه</option><option value="adventure">ماجراجویی</option><option value="spectator">تماشاگر</option></select></label>
+    <label>سختی<select data-p="difficulty"><option value="peaceful">صلح‌آمیز</option><option value="easy">آسان</option><option value="normal">معمولی</option><option value="hard">سخت</option></select></label>
+    <label>حالت زمین (برای دنیای جدید)<select data-p="level-type"><option value="default">معمولی</option><option value="flat">فلت</option><option value="largebiomes">بایوم‌های بزرگ</option><option value="amplified">آمپلیفاید</option></select></label>
+    <label>سید دنیا<input data-p="level-seed"></label>
+    <label>رم<input data-c="memory" placeholder="2G" style="direction:ltr"></label>
+    <label>پورت ماینکرافت<input data-p="server-port" type="number"></label>
+    <label>دامنه<input data-c="domain" placeholder="mc.example.com" style="direction:ltr"></label>
+  </div>
+  <label class="ck"><input type="checkbox" data-p="white-list"> لیست سفید فعال باشد</label>
+  <label class="ck"><input type="checkbox" data-p="online-mode"> فقط اکانت اورجینال (online-mode)</label>
+  <label class="ck"><input type="checkbox" data-p="pvp"> PvP فعال باشد</label>
+  <p class="hint">تغییر نوع یا ورژن در استارت بعدی نصب می‌شود. تغییر حالت زمین و سید فقط روی دنیای جدید اثر دارد (تب «دنیا»). پورت را در تنظیمات TCP Proxy ریلوی هم با همین عدد بزن. دامنه فقط برای نمایش آدرس اتصال بالای پنل است؛ رکورد DNS را خودت در ریلوی و دامنه‌ات می‌سازی.</p>
+  <button class="pri" onclick="saveCfg()">ذخیره تنظیمات</button>
+</section>
+
+<section id="s2">
+  <p id="pdir" class="hint"></p>
+  <label>آپلود فایل jar<input type="file" accept=".jar" multiple onchange="upMods(this.files)"></label>
+  <ul id="files"></ul>
+</section>
+
+<section id="s3">
+  <label>آپلود مپ (فایل zip که داخلش level.dat باشد)<input type="file" accept=".zip" onchange="upWorld(this.files[0])"></label>
+  <p class="hint">سرور باید خاموش باشد. مپ جایگزین دنیای فعلی می‌شود.</p>
+  <button class="bad" onclick="resetWorld()">حذف دنیای فعلی (دنیای جدید با تنظیمات تب «تنظیمات»)</button>
+</section>
+
+<section id="s4">
+  <div class="row"><input id="wn" placeholder="اسم بازیکن" onkeydown="if(event.key==='Enter')wlAdd()"><button class="pri" onclick="wlAdd()">افزودن</button></div>
+  <ul id="wl"></ul>
+</section>
+<div id="pg" class="hint"></div>
+</main>
+<div id="T"></div>
+<script>
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const TABS=['کنسول','تنظیمات','پلاگین / مود','دنیا','لیست سفید'];
+const TN={PAPER:'Paper (پلاگین)',VANILLA:'Vanilla',FORGE:'Forge (مود)',FABRIC:'Fabric (مود)'};
+let since=0,tm;
+TABS.forEach((t,i)=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>tab(i);$('#tabs').append(b)});
+function tab(i){$$('section').forEach((s,j)=>s.classList.toggle('on',i===j));$$('#tabs button').forEach((b,j)=>b.classList.toggle('on',i===j));if(i===1)loadCfg();if(i===2)loadFiles();if(i===4)loadWl()}
+function toast(m){const t=$('#T');t.textContent=m;t.style.display='block';clearTimeout(tm);tm=setTimeout(()=>t.style.display='none',3500)}
+async function api(p,o={}){const r=await fetch('/api/'+p,{credentials:'same-origin',...o});if(r.status===401&&p!=='login'){$('#L').hidden=false;throw new Error('ورود لازم است')}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||r.status);return j}
+const post=(p,b)=>api(p,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b||{})});
+const go=f=>async(...a)=>{try{await f(...a)}catch(e){toast(e.message)}};
+function up(url,f){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.open('POST','/api/'+url);x.upload.onprogress=e=>$('#pg').textContent='در حال آپلود: '+Math.round(e.loaded/e.total*100)+'٪';x.onload=()=>{$('#pg').textContent='';x.status<300?ok():no(new Error(JSON.parse(x.responseText).error))};x.onerror=()=>{$('#pg').textContent='';no(new Error('آپلود ناموفق بود'))};x.send(f)})}
+
+const login=go(async()=>{await post('login',{password:$('#pw').value});$('#L').hidden=true;$('#pw').value='';init()});
+$('#pw').onkeydown=e=>{if(e.key==='Enter')login()};
+const act=go(async a=>{await post(a);toast(a==='start'?'در حال روشن شدن…':a==='stop'?'در حال خاموش شدن…':'در حال ری‌استارت…')});
+const sendCmd=go(async()=>{const c=$('#cmd').value.trim();if(!c)return;await post('cmd',{cmd:c});$('#cmd').value=''});
+
+async function poll(){
+  try{
+    const j=await api('state?since='+since);since=j.seq;
+    const st=$('#st');st.textContent=j.busy?'در حال نصب…':j.running?'روشن':'خاموش';st.className=j.busy?'w':j.running?'on':'';
+    $('#addr').textContent=j.domain?j.domain+(j.port==='25565'?'':':'+j.port):'';
+    if(j.lines.length){const l=$('#log'),end=l.scrollTop+l.clientHeight>=l.scrollHeight-30;l.textContent=(l.textContent+j.lines.join('\n')+'\n').slice(-60000);if(end)l.scrollTop=l.scrollHeight}
+  }catch{}
+  setTimeout(poll,1500);
+}
+
+const loadCfg=go(async()=>{
+  const j=await api('config');
+  $('#type').innerHTML=j.types.map(t=>`<option value="${t}">${TN[t]}</option>`).join('');
+  $('#ver').innerHTML=j.versions.map(v=>`<option>${v}</option>`).join('');
+  $$('[data-c]').forEach(e=>e.value=j.cfg[e.dataset.c]||'');
+  $$('[data-p]').forEach(e=>{const v=j.props[e.dataset.p];if(e.type==='checkbox')e.checked=v==='true';else e.value=v});
+  $('#ic').src='/api/icon?'+Date.now();
+});
+const saveCfg=go(async()=>{
+  const b={props:{}};
+  $$('[data-c]').forEach(e=>b[e.dataset.c]=e.value);
+  $$('[data-p]').forEach(e=>b.props[e.dataset.p]=e.type==='checkbox'?String(e.checked):e.value);
+  await post('config',b);toast('ذخیره شد. برای اعمال، سرور را ری‌استارت کن.');
+});
+const icon=go(async f=>{
+  if(!f)return;const i=await createImageBitmap(f),c=document.createElement('canvas');c.width=c.height=64;c.getContext('2d').drawImage(i,0,0,64,64);
+  await up('upload?kind=icon',await new Promise(r=>c.toBlob(r,'image/png')));$('#ic').src='/api/icon?'+Date.now();toast('آیکون ذخیره شد');
+});
+
+const loadFiles=go(async()=>{
+  const j=await api('files');
+  $('#pdir').textContent=j.dir?`فایل‌ها در پوشه ${j.dir} ذخیره می‌شوند.`:'نوع Vanilla پلاگین و مود ندارد. در تب تنظیمات Paper، Forge یا Fabric را انتخاب کن.';
+  $('#files').innerHTML='';
+  j.files.forEach(f=>{const li=document.createElement('li');li.innerHTML='<span></span><button class="bad">حذف</button>';li.firstChild.textContent=f.name+' ('+(f.size/1048576).toFixed(1)+' MB)';li.lastChild.onclick=go(async()=>{await api('files?name='+encodeURIComponent(f.name),{method:'DELETE'});loadFiles()});$('#files').append(li)});
+});
+const upMods=go(async fs=>{for(const f of fs)await up('upload?kind=plugin&name='+encodeURIComponent(f.name),f);toast('آپلود شد. سرور را ری‌استارت کن.');loadFiles()});
+
+const upWorld=go(async f=>{if(!f)return;await up('upload?kind=world&name='+encodeURIComponent(f.name),f);toast('مپ جایگزین شد. سرور را روشن کن.')});
+const resetWorld=go(async()=>{if(!confirm('دنیای فعلی برای همیشه پاک شود؟'))return;await post('world/reset');toast('دنیا حذف شد. با استارت بعدی دنیای جدید ساخته می‌شود.')});
+
+const loadWl=go(async()=>{
+  const j=await api('whitelist');$('#wl').innerHTML='';
+  j.list.forEach(n=>{const li=document.createElement('li');li.innerHTML='<span></span><button class="bad">حذف</button>';li.firstChild.textContent=n;li.lastChild.onclick=go(async()=>{await api('whitelist?name='+encodeURIComponent(n),{method:'DELETE'});loadWl()});$('#wl').append(li)});
+});
+const wlAdd=go(async()=>{const n=$('#wn').value.trim();if(!n)return;await post('whitelist',{name:n});$('#wn').value='';loadWl()});
+
+let polling=false;
+async function init(){tab(0);since=0;$('#log').textContent='';if(!polling){polling=true;poll()}}
+api('state').then(init).catch(()=>{});
+</script>
+</body>
+</html>
